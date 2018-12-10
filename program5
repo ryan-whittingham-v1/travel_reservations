@@ -1,0 +1,113 @@
+#!/bin/bash
+
+##############################################################
+#Ryan Whittingham
+#CSE 224
+#November 26, 2018
+#Programming Assignment 5
+#############################################################
+
+###############  Program  Description  ########################
+#Travel reservation program that uses zenity to display GUI prompts
+#to gather travel details and then saves the information into a txt file.
+################################################################
+
+
+title="New Reservation"
+
+$(zenity --notification  --text="Travel Reservation Tool launched.")
+############################  Name  #################################
+name=$(zenity --forms --add-entry=Firstname: --add-entry=Lastname: --separator='_' --width 300 --height 100  --title="$title" --text="Enter a name to create a reservation.")
+ret=$?
+if [ $ret -eq "1" ] 
+then
+	exit
+fi
+name="${name^^}"
+##########################  Check if reservation already exists  ###########
+if  grep -q "$name" reservations.txt;
+then
+	$(zenity --question  --width 400 --title="$title" --text "$name already has a reservation. Would you like to overwrite it?")
+	ret=$?
+	if [ $ret -eq "1" ] 
+	then
+		exit
+	fi
+fi
+###########################  Departure  ########################################
+departure=$(zenity  --list  --width 500 --height 300 --title="$title" --text "Departing from:" --radiolist  --hide-header  --column ""  --column  ""  TRUE Portland FALSE Seattle FALSE Atlanta FALSE "Kansas City" FALSE Denver FALSE "Las Vegas" FALSE Miami FALSE Boston);
+ret=$?
+if [ $ret -eq "1" ] 
+then
+	exit
+fi
+##############################  Destination  #####################################
+flag=1
+while [[ $flag -eq 1 ]]
+do	
+	destination=$(zenity  --list  --width 500 --height 300 --title="$title" --text "Destination:" --radiolist  --hide-header --column "" --column "Locations" TRUE Portland FALSE Seattle FALSE Atlanta FALSE "Kansas City" FALSE Denver FALSE "Las Vegas" FALSE Miami FALSE Boston)
+ret=$?
+	if [ $ret -eq "1" ] 
+	then
+		exit
+	fi
+	####################  Error Check  ##################################
+	if [[ $destination == $departure ]]
+	then
+		$(zenity --error  --width 400 --title="Reservation Maker" --text "Destination cannot match departure.")
+	else 
+		flag=0
+	fi
+	
+done
+##############################  Departure Date  ###################################
+departDate=$(zenity --calendar --width 200 --height 200 --title="$title" --text "Departure date:")
+ret=$?
+if [ $ret -eq "1" ] 
+then
+	exit
+fi
+#############################  Return Date  #######################################
+flag=1
+while [[ $flag -eq 1 ]]
+do
+	returnDate=$(zenity --calendar  --width 200 --height 200 --title="$title" --text "Return date:")
+	ret=$?
+	if [ $ret -eq "1" ] 
+	then
+		exit
+	fi
+	##################  Error Check  ##########################3
+	if [[ $departDate > $returnDate ]]
+	then
+		$(zenity --error  --width 400 --title="$title" --text "Return date cannot be before departure date.")
+	else 
+		flag=0
+	fi
+done
+############################  Checked Bags  ######################################
+checkBags=$(zenity  --list  --width 500 --height 250 --title="$title" --text "Number of checked bags:" --radiolist  --hide-header  --column ""  --column  ""  TRUE 1 FALSE 2 FALSE 3 FALSE 4 FALSE 5 FALSE Other);
+	ret=$?
+	if [ $ret -eq "1" ] 
+	then
+		exit
+	fi
+	if [ "$checkBags" == "Other" ]
+	then
+		checkBags=$(zenity  --entry --title="$title" --text "Number of checked bags:")
+	fi
+
+###################  Print to console  ##############################
+echo "Name: $name"
+echo "Departuring from: $departure"
+echo "Destination: $destination"
+echo "Departure date: $departDate"
+echo "Return date: $returnDate"
+echo "Number of checked bags: $checkBags"
+
+################  Deletes existing reservation in txt file  ##########################
+sed -i "/$name/d" reservations.txt
+##############  Write to reservations txt file  #######################################
+echo "$name|$departure|$destination|$departDate|$returnDate|$checkBags" >> reservations.txt
+$(zenity --notification  --text="Reservation saved.")
+exit
